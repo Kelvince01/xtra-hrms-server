@@ -1,26 +1,22 @@
 import express, {
-  Request,
-  Response,
   Application,
-  NextFunction,
   urlencoded,
 } from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import morgan from 'morgan'
+import compression from 'compression'
 import swaggerUi from 'swagger-ui-express'
 
 //For env File
 dotenv.config()
 
-import pingRoutes from './routes/ping.routes'
-import taskRoutes from './routes/tasks.routes'
-import chatbotRoutes from './routes/chatbot.routes'
-import { ValidateError } from 'tsoa'
+import { startRoutes } from './routes'
+import { errorHandler } from './utils/custom.error'
 
 const app: Application = express()
-const port = process.env.PORT || 3000
 
+app.use(compression())
 // Use body parser to read sent json payloads
 app.use(
   urlencoded({
@@ -46,40 +42,9 @@ app.use(
   })
 )
 
-app.get('/', (req: Request, res: Response) => {
-  res.send('Welcome to Express & TypeScript Server')
-})
-
-app.use('/api/ping', pingRoutes)
-app.use('/api/tasks', taskRoutes) // Add this line to mount the Task API routes
-app.use('/api/chatbot', chatbotRoutes) // Add this line to mount the Chatbot API routes
+startRoutes(app);
 
 // Add this error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack)
-  // res.status(500).send('Something went wrong')
+app.use(errorHandler);
 
-  if (err instanceof ValidateError) {
-    console.warn(`Caught Validation Error for ${req.path}:`, err.fields)
-    return res.status(422).json({
-      message: 'Validation Failed',
-      details: err?.fields,
-    })
-  }
-
-  if (err instanceof Error) {
-    return res.status(500).json({
-      message: 'Internal Server Error',
-    })
-  }
-
-  res.status(404).send({
-    message: 'Not Found',
-  })
-
-  next()
-})
-
-app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${port}`)
-})
+export default app
